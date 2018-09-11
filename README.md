@@ -33,7 +33,17 @@ int main() {
     // Will block until there's an item available. You typically use this from
     // another thread. Items are *moved*, so move-only types like
     // std::unique_ptr can be used as item types.
-    auto x = q.Pop();
+    auto x = q.PopWithGuard();
     return 0;
 }
 ```
+
+The `SafeQueue` will refuse to destroy itself until all "tasks" are done. This
+`SafeQueue` keeps track of the number of active "tasks".
+Every `.Push(...)` will increment the task count by one. You will have to
+manually invoke `.TaskDone()` to decrement it if you use `.Get()` in a consumer
+thread. Alternatively, you can use `.GetWithGuard()` in a consumer thread. This
+will return an `std::pair<T, TaskDoneGuard>`. If the `TaskDoneGuard` goes out
+of scope, it will call `.TaskDone()` on the queue automatically. However, in
+some cases you might want to call `.TaskDone()` from the producer thread
+instead. The task idea was inspired by Python's Queue implementation.
